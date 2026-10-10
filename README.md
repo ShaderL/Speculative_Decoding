@@ -47,7 +47,11 @@ export HF_ENDPOINT=https://hf-mirror.com
 8.运行投机解码
 ```sh
 python cli.py generate --speculative-decoding \
---target-model-path xxx --draft-model-path xxx --draft-length 8 --max-new-tokens 512 \
---prompt xx
+  --target-model-path checkpoints/target.pth \
+  --draft-model-path checkpoints/draft.pth \
+  --draft-length 8 \
+  --max-new-tokens 64 \
+  --prompt "Once upon a time" \
+  --device cuda
 
 ```
