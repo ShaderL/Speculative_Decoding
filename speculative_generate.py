@@ -9,9 +9,19 @@ from transformers import GPT2TokenizerFast
 
 def load_model(model_path, device):
     checkpoint = torch.load(model_path, map_location=device)
-    config = checkpoint["config"]
+    model_config = checkpoint["model_config"]
 
-    model = Transformer(config["model"])
+    config = ModelConfig(
+        vocab_size=model_config["vocab_size"],
+        block_size=model_config["block_size"],
+        num_layers=model_config["num_layers"],
+        d_model=model_config["d_model"],
+        d_ffn=model_config["d_ffn"],
+        num_heads=model_config["num_heads"],
+        rms_norm_eps=model_config["rms_norm_eps"],
+    )
+
+    model = Transformer(config)
     model.load_state_dict(checkpoint["model_state_dict"])
     model.to(device)
     model.eval()
@@ -56,7 +66,7 @@ def speculative_generate(
         draft_input_ids = input_ids.clone()  # prompt，此后是 input_ids + new，每次都加上整段的 draft
 
         for _ in range(draft_length):
-            draft_logits = draft_model(draft_input_ids).output
+            draft_logits = draft_model(draft_input_ids)
             new_token_id = sample(draft_logits[:, -1, :])
             draft_ids.append(new_token_id.item())
             draft_input_ids = torch.cat([draft_input_ids, new_token_id], dim=1)  # tensor 使用 cat
@@ -70,7 +80,7 @@ def speculative_generate(
             # 所以上下文一致，则 logits 必定一致。所以 draft logits 最后一版就可以保留前面每个 token 的 logits
 
         # 目标模型进行验证（draft_input_ids 是所有上下文）
-        target_logits = target_model(draft_input_ids).output
+        target_logits = target_model(draft_input_ids)
         accept_length = 0
         accept_ids = []
 
