@@ -17,7 +17,7 @@ source .venv/bin/activate
 2.安装依赖
 ```sh
 pip install -r requirements.txt
-python -c "import torch; import transformers; import datasets; import yaml; print('all imports ok')"
+python -c "import transformers; import datasets; import yaml; print('all imports ok')"
 ```
 
 3.修改 huggingface Cache 路径！！！
