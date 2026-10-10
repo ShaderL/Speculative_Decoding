@@ -40,7 +40,11 @@ pip install torch torchvision torchaudio \
 export HF_ENDPOINT=https://hf-mirror.com
 ```
 
-5.运行投机解码
+6.修改训练配置 configs/target.yaml 和 configs/draft.yaml
+
+7.训练目标模型和草稿模型
+
+8.运行投机解码
 ```sh
 python cli.py generate --speculative-decoding \
 --target-model-path xxx --draft-model-path xxx --draft-length 8 --max-new-tokens 512 \
