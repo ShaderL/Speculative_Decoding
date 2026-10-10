@@ -44,6 +44,10 @@ def speculative_generate(
         max_new_tokens,
         tokenizer_name):
 
+    # 统计指标区
+    total_accept_length = 0  # 累计接受长度
+    total_rounds = 0  # 轮数
+
     target_model = load_model(target_model_path, device)
     draft_model = load_model(draft_model_path, device)
 
@@ -119,6 +123,9 @@ def speculative_generate(
                     accept_ids.append(torch.multinomial(adjusted, 1).item())
                     break
 
+        total_accept_length += accept_length
+        total_rounds += 1
+
         # 全部接受了，也要额外加上目标模型的最后一个采样
         # 为什么采用 draft_length ，因为如果 eos 中断的话不走这个“赠礼”分支
         if accept_length == draft_length:
@@ -135,5 +142,21 @@ def speculative_generate(
 
         L = input_ids.shape[1]
 
+    total_draft_length = input_ids.shape[1] - prompt_len
+
+    # 平均接受长度
+    avg_accept_length = total_accept_length / total_rounds
+    # 平均接受率
+    avg_accept_rate = total_accept_length / total_draft_length
+
+    print("=" * 50)
+    print(f"total_rounds:        {total_rounds}")
+    print(f"total_accept:        {total_accept_length}")
+    print(f"avg accept length:   {avg_accept_length:.3f}")
+    print(f"avg accept rate:     {avg_accept_rate:.2%}")
+    print(f"generated tokens:    {total_draft_length}")
+    print(f"avg tokens / round:  {(input_ids.shape[1] - prompt_len) / max(total_rounds, 1):.2f}")
+    print("=" * 50)
+    
     output = tokenizer.decode(input_ids[0], skip_special_tokens=True)
     return output
