@@ -36,6 +36,8 @@ def sample(logits):
 
 @torch.no_grad()
 def speculative_generate(
+        target_model,
+        draft_model,
         target_model_path,
         draft_model_path,
         draft_length,
@@ -47,9 +49,11 @@ def speculative_generate(
     # 统计指标区
     total_accept_length = 0  # 累计接受长度
     total_rounds = 0  # 轮数
+    total_draft = 0  # 总生成过的草稿数量
 
-    target_model = load_model(target_model_path, device)
-    draft_model = load_model(draft_model_path, device)
+    if target_model is None or draft_model is None:
+        target_model = load_model(target_model_path, device)
+        draft_model = load_model(draft_model_path, device)
 
     tokenizer = GPT2TokenizerFast.from_pretrained(tokenizer_name)
     # input_ids [1,L]  # [1,L,dmodel] 是在 Embedding 后才变成的
@@ -76,6 +80,7 @@ def speculative_generate(
             draft_input_ids = torch.cat([draft_input_ids, new_token_id], dim=1)  # tensor 使用 cat
             if (new_token_id.item() == tokenizer.eos_token_id):
                 break
+            
 
             # 此时 input_ids 比 draft_logits 多一行，因为最后一个 token id 拼接后没有再走一次 draft_model
             # 但是！draft_logits 最后一行已经是 最后一个 token 的分数了，而 target_logits 的最后一行是对下一个 token 的分数
@@ -90,6 +95,7 @@ def speculative_generate(
 
         # 考虑 EOS 后的实际草稿长度
         actual_len = len(draft_ids)
+        total_draft += actual_len
 
         for i in range(actual_len):
             # softmax 取概率分布，然后再取概率 p(x),q(x)
@@ -147,16 +153,16 @@ def speculative_generate(
     # 平均接受长度
     avg_accept_length = total_accept_length / total_rounds
     # 平均接受率
-    avg_accept_rate = total_accept_length / total_draft_length
+    avg_accept_rate = total_accept_length / total_draft
 
-    print("=" * 50)
-    print(f"total_rounds:        {total_rounds}")
-    print(f"total_accept:        {total_accept_length}")
-    print(f"avg accept length:   {avg_accept_length:.3f}")
-    print(f"avg accept rate:     {avg_accept_rate:.2%}")
-    print(f"generated tokens:    {total_draft_length}")
-    print(f"avg tokens / round:  {(input_ids.shape[1] - prompt_len) / max(total_rounds, 1):.2f}")
-    print("=" * 50)
-    
+    # print("=" * 50)
+    # print(f"total_rounds:        {total_rounds}")
+    # print(f"total_accept:        {total_accept_length}")
+    # print(f"avg accept length:   {avg_accept_length:.3f}")
+    # print(f"avg accept rate:     {avg_accept_rate:.2%}")
+    # print(f"generated tokens:    {total_draft_length}")
+    # print(f"avg tokens / round:  {(input_ids.shape[1] - prompt_len) / max(total_rounds, 1):.2f}")
+    # print("=" * 50)
+
     output = tokenizer.decode(input_ids[0], skip_special_tokens=True)
     return output
